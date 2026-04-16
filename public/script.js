@@ -105,18 +105,20 @@ function renderData(data, container) {
             }
         }
         
-        // Refine names based on path matching
-        const p = row.pagePath.toLowerCase();
-        if (p.includes('thelasthuman')) gameName = 'The Last Human';
-        else if (p.includes('waspbuster')) gameName = 'WaspBuster';
-        else if (p.includes('floodweb')) gameName = 'FloodWeb';
-        else if (p.includes('whitelabelflood')) gameName = 'WhiteLabelFlood';
-        else if (p.includes('filedefender')) gameName = 'FileDefender';
-        else if (p.includes('platris')) gameName = 'Platris';
-        else if (p.includes('scratchthat') || p.includes('scratcher')) gameName = 'Scratch That!';
-        else if (p.includes('smartspin')) gameName = 'SmartSpin';
-        else if (p.includes('daleygames')) gameName = 'DaleyGames Portal';
-        else if (p.includes('santa')) gameName = 'Santa Express';
+        // Refine names based on path or hostname matching
+        const p = (row.pagePath || '').toLowerCase();
+        const h = (row.hostName || '').toLowerCase();
+        
+        if (p.includes('thelasthuman') || h.includes('thelasthuman')) gameName = 'The Last Human';
+        else if (p.includes('waspbuster') || h.includes('waspbuster')) gameName = 'WaspBuster';
+        else if (p.includes('floodweb') || h.includes('floodcube')) gameName = 'FloodWeb';
+        else if (p.includes('whitelabelflood') || h.includes('whitelabelflood')) gameName = 'WhiteLabelFlood';
+        else if (p.includes('filedefender') || h.includes('filedefender')) gameName = 'FileDefender';
+        else if (p.includes('platris') || h.includes('platris')) gameName = 'Platris';
+        else if (p.includes('scratchthat') || p.includes('scratcher') || h.includes('scratch')) gameName = 'Scratch That!';
+        else if (p.includes('smartspin') || h.includes('smart-spin') || h.includes('smartspin')) gameName = 'SmartSpin';
+        else if (p.includes('daleygames') || h.includes('daleygames')) gameName = 'DaleyGames Portal';
+        else if (p.includes('santa') || h.includes('santa')) gameName = 'Santa Express';
 
         if (!gamesMap.has(gameName)) {
             gamesMap.set(gameName, { views: 0, users: 0, sessions: 0, newUsers: 0, totalEngagedSessions: 0, totalDuration: 0, paths: new Set() });
@@ -261,19 +263,49 @@ function renderChart(timeseries) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             plugins: {
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleFont: { family: 'Outfit', size: 14, weight: 'bold' },
+                    bodyFont: { family: 'Outfit', size: 13 },
+                    padding: 12,
+                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) label += context.parsed.y;
+                            
+                            // Add explainable context
+                            if (context.dataset.label === 'Active Users') {
+                                label += ' (Unique Individual Devices)';
+                            } else if (context.dataset.label === 'Page Views') {
+                                label += ' (Total Site Loads/Refreshes)';
+                            }
+                            return label;
+                        }
+                    }
+                },
                 legend: {
-                    labels: { color: '#94a3b8', font: { family: 'Outfit', size: 13 } }
+                    labels: { color: '#94a3b8', font: { family: 'Outfit', size: 13 }, usePointStyle: true },
+                    onHover: function(e) { e.native.target.style.cursor = 'pointer'; },
+                    onLeave: function(e) { e.native.target.style.cursor = 'default'; }
                 }
             },
             scales: {
                 x: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
                     ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
                 },
                 y: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+                    grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                    ticks: { color: '#94a3b8', font: { family: 'Outfit' } },
+                    beginAtZero: true
                 }
             }
         }

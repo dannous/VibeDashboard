@@ -10,7 +10,8 @@ const port = process.env.PORT || 3000;
 
 // Initialize Firebase Admin (Uses GOOGLE_APPLICATION_CREDENTIALS)
 admin.initializeApp({
-    credential: admin.credential.applicationDefault()
+    credential: admin.credential.applicationDefault(),
+    projectId: 'floodcubed' // Override to match the frontend token audience
 });
 
 app.use(cors());
@@ -83,12 +84,24 @@ app.get('/api/analytics', async (req, res) => {
         return res.status(500).json({ error: 'GA_PROPERTY_ID not configured in .env' });
     }
 
-    const analyticsDataClient = new BetaAnalyticsDataClient();
+    // Ignore localhost, common LAN IP patterns, and preview/staging domains from our queries
+    const ignoreLocalhostFilter = {
+      notExpression: {
+        filter: {
+          fieldName: 'hostName',
+          stringFilter: {
+            matchType: 'PARTIAL_REGEXP',
+            value: 'localhost|127\\.0\\.0\\.1|192\\.168\\.|floodcubed\\.web\\.app'
+          }
+        }
+      }
+    };
 
     // Fetch summary data for the last 30 days grouped by page path and hostname
     const summaryPromise = analyticsDataClient.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dimensionFilter: ignoreLocalhostFilter,
       dimensions: [{ name: 'hostName' }, { name: 'pagePath' }],
       metrics: [
         { name: 'screenPageViews' },
@@ -104,6 +117,7 @@ app.get('/api/analytics', async (req, res) => {
     const timeseriesPromise = analyticsDataClient.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dimensionFilter: ignoreLocalhostFilter,
       dimensions: [{ name: 'date' }],
       metrics: [
         { name: 'activeUsers' },
